@@ -1,351 +1,335 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+function bytesToBits(bytes){
 
-<title>Ghost Message</title>
+    let bits = '';
 
-<style>
+    for(const byte of bytes){
 
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-    font-family:Inter,system-ui,sans-serif;
-}
+        bits += byte
+            .toString(2)
+            .padStart(8,'0');
 
-body{
-    min-height:100vh;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    background:#0d0d0d;
-    color:white;
-    padding:20px;
-}
+    }
 
-.container{
-    width:100%;
-    max-width:480px;
-}
+    return bits;
 
-.logo{
-    text-align:center;
-    margin-bottom:40px;
-}
-
-.logo h1{
-    font-size:2rem;
-    font-weight:700;
-}
-
-.logo p{
-    color:#888;
-    margin-top:8px;
-}
-
-.card{
-    background:#151515;
-    border:1px solid #222;
-    border-radius:24px;
-    padding:24px;
-    margin-bottom:20px;
-    backdrop-filter:blur(20px);
-}
-
-h2{
-    margin-bottom:16px;
-    font-size:1rem;
-}
-
-.file-box{
-    border:2px dashed #333;
-    border-radius:16px;
-    padding:30px;
-    text-align:center;
-    cursor:pointer;
-    transition:.3s;
-}
-
-.file-box:hover{
-    border-color:#666;
-}
-
-input[type=file]{
-    width:100%;
-}
-
-textarea{
-    width:100%;
-    background:#1b1b1b;
-    border:none;
-    outline:none;
-    color:white;
-    padding:16px;
-    border-radius:14px;
-    resize:none;
-    height:120px;
-    margin-top:15px;
-}
-
-button{
-    width:100%;
-    margin-top:16px;
-    padding:14px;
-    border:none;
-    border-radius:14px;
-    background:white;
-    color:black;
-    font-weight:600;
-    cursor:pointer;
-    transition:.3s;
-}
-
-button:hover{
-    transform:translateY(-2px);
-}
-
-.result{
-    margin-top:15px;
-    background:#1b1b1b;
-    padding:15px;
-    border-radius:14px;
-    color:#ddd;
-    word-wrap:break-word;
-}
-
-.divider{
-    text-align:center;
-    color:#666;
-    margin:20px 0;
-}
-
-.footer{
-    text-align:center;
-    color:#666;
-    font-size:.8rem;
-    margin-top:15px;
-}
-
-</style>
-</head>
-
-<body>
-
-<div class="container">
-
-<div class="logo">
-<h1>Ghost Message</h1>
-<p>Hide messages inside images</p>
-</div>
-
-<div class="card">
-
-<h2>Encode</h2>
-
-<input type="file" id="encodeImage" accept="image/png">
-
-<textarea
-id="message"
-placeholder="Type your secret message..."
-></textarea>
-
-<button onclick="encode()">
-Encode & Download
-</button>
-
-</div>
-
-<div class="divider">
-or
-</div>
-
-<div class="card">
-
-<h2>Decode</h2>
-
-<input type="file" id="decodeImage" accept="image/png">
-
-<button onclick="decode()">
-Reveal Message
-</button>
-
-<div id="decoded" class="result">
-No message yet...
-</div>
-
-</div>
-
-<div class="footer">
-End-to-end browser processing • No uploads
-</div>
-
-</div>
-
-<canvas id="canvas" style="display:none"></canvas>
-
-<script>
-
-/* Encode */
-
-function textToBits(text){
-let bits='';
-
-for(let i=0;i<text.length;i++){
-bits+=text.charCodeAt(i)
-.toString(2)
-.padStart(8,'0');
-}
-
-bits+='00000000';
-
-return bits;
 }
 
 function encode(){
 
-const file=
-document.getElementById('encodeImage').files[0];
+    const file =
+    document.getElementById(
+        'encodeImage'
+    ).files[0];
 
-const msg=
-document.getElementById('message').value;
+    const message =
+    document.getElementById(
+        'message'
+    ).value;
 
-if(!file || !msg){
-alert('Select image and enter message');
-return;
+    if(!file || !message){
+
+        alert(
+            'Select image and enter message'
+        );
+
+        return;
+
+    }
+
+    const encoder =
+    new TextEncoder();
+
+    const messageBytes =
+    encoder.encode(message);
+
+    const length =
+    messageBytes.length;
+
+    const payload =
+    new Uint8Array(
+        length + 4
+    );
+
+    payload[0] =
+    (length >> 24) & 255;
+
+    payload[1] =
+    (length >> 16) & 255;
+
+    payload[2] =
+    (length >> 8) & 255;
+
+    payload[3] =
+    length & 255;
+
+    payload.set(
+        messageBytes,
+        4
+    );
+
+    const bits =
+    bytesToBits(payload);
+
+    const img =
+    new Image();
+
+    img.onload = () => {
+
+        const canvas =
+        document.getElementById(
+            'canvas'
+        );
+
+        const ctx =
+        canvas.getContext(
+            '2d'
+        );
+
+        canvas.width =
+        img.width;
+
+        canvas.height =
+        img.height;
+
+        ctx.drawImage(
+            img,
+            0,
+            0
+        );
+
+        const imageData =
+        ctx.getImageData(
+            0,
+            0,
+            canvas.width,
+            canvas.height
+        );
+
+        const data =
+        imageData.data;
+
+        if(
+            bits.length >
+            data.length / 4
+        ){
+
+            alert(
+                'Message too large for image'
+            );
+
+            return;
+
+        }
+
+        for(
+            let i = 0;
+            i < bits.length;
+            i++
+        ){
+
+            data[i * 4] =
+            (
+                data[i * 4] &
+                254
+            ) |
+            Number(bits[i]);
+
+        }
+
+        ctx.putImageData(
+            imageData,
+            0,
+            0
+        );
+
+        canvas.toBlob(blob => {
+
+            const url =
+            URL.createObjectURL(
+                blob
+            );
+
+            const preview =
+            document.getElementById(
+                'preview'
+            );
+
+            preview.src =
+            url;
+
+            preview.style.display =
+            'block';
+
+            const btn =
+            document.getElementById(
+                'downloadBtn'
+            );
+
+            btn.href =
+            url;
+
+            btn.download =
+            'ghost-message.png';
+
+            btn.style.display =
+            'block';
+
+        },'image/png');
+
+    };
+
+    img.src =
+    URL.createObjectURL(
+        file
+    );
+
 }
-
-const img=new Image();
-
-img.onload=function(){
-
-const canvas=
-document.getElementById('canvas');
-
-const ctx=
-canvas.getContext('2d');
-
-canvas.width=img.width;
-canvas.height=img.height;
-
-ctx.drawImage(img,0,0);
-
-const imageData=
-ctx.getImageData(
-0,0,
-canvas.width,
-canvas.height
-);
-
-const data=imageData.data;
-
-const bits=textToBits(msg);
-
-for(let i=0;i<bits.length;i++){
-
-data[i*4]=
-(data[i*4]&254)
-|
-Number(bits[i]);
-
-}
-
-ctx.putImageData(
-imageData,
-0,
-0
-);
-
-const link=
-document.createElement('a');
-
-link.href=
-canvas.toDataURL('image/png');
-
-link.download=
-'ghost-message.png';
-
-link.click();
-
-};
-
-img.src=
-URL.createObjectURL(file);
-
-}
-
-/* Decode */
 
 function decode(){
 
-const file=
-document.getElementById('decodeImage').files[0];
+    const file =
+    document.getElementById(
+        'decodeImage'
+    ).files[0];
 
-if(!file){
-alert('Select image');
-return;
+    if(!file){
+
+        alert(
+            'Select image'
+        );
+
+        return;
+
+    }
+
+    const img =
+    new Image();
+
+    img.onload = () => {
+
+        const canvas =
+        document.getElementById(
+            'canvas'
+        );
+
+        const ctx =
+        canvas.getContext(
+            '2d'
+        );
+
+        canvas.width =
+        img.width;
+
+        canvas.height =
+        img.height;
+
+        ctx.drawImage(
+            img,
+            0,
+            0
+        );
+
+        const data =
+        ctx.getImageData(
+            0,
+            0,
+            canvas.width,
+            canvas.height
+        ).data;
+
+        let bitStream = '';
+
+        for(
+            let i = 0;
+            i < data.length;
+            i += 4
+        ){
+
+            bitStream +=
+            (data[i] & 1);
+
+        }
+
+        const lengthBytes =
+        [];
+
+        for(
+            let i = 0;
+            i < 32;
+            i += 8
+        ){
+
+            lengthBytes.push(
+                parseInt(
+                    bitStream.slice(
+                        i,
+                        i + 8
+                    ),
+                    2
+                )
+            );
+
+        }
+
+        const messageLength =
+        (
+            lengthBytes[0] << 24
+        ) |
+        (
+            lengthBytes[1] << 16
+        ) |
+        (
+            lengthBytes[2] << 8
+        ) |
+        (
+            lengthBytes[3]
+        );
+
+        const bytes =
+        new Uint8Array(
+            messageLength
+        );
+
+        let pointer = 32;
+
+        for(
+            let i = 0;
+            i < messageLength;
+            i++
+        ){
+
+            bytes[i] =
+            parseInt(
+                bitStream.slice(
+                    pointer,
+                    pointer + 8
+                ),
+                2
+            );
+
+            pointer += 8;
+
+        }
+
+        const decoder =
+        new TextDecoder();
+
+        const message =
+        decoder.decode(
+            bytes
+        );
+
+        document.getElementById(
+            'decoded'
+        ).innerText =
+        message ||
+        'No hidden message found';
+
+    };
+
+    img.src =
+    URL.createObjectURL(
+        file
+    );
+
 }
-
-const img=new Image();
-
-img.onload=function(){
-
-const canvas=
-document.getElementById('canvas');
-
-const ctx=
-canvas.getContext('2d');
-
-canvas.width=img.width;
-canvas.height=img.height;
-
-ctx.drawImage(img,0,0);
-
-const data=
-ctx.getImageData(
-0,0,
-canvas.width,
-canvas.height
-).data;
-
-let bits='';
-let text='';
-
-for(let i=0;i<data.length;i+=4){
-
-bits+=(data[i]&1);
-
-if(bits.length===8){
-
-const char=
-String.fromCharCode(
-parseInt(bits,2)
-);
-
-if(char.charCodeAt(0)===0)
-break;
-
-text+=char;
-
-bits='';
-
-}
-
-}
-
-document.getElementById(
-'decoded'
-).textContent=text;
-
-};
-
-img.src=
-URL.createObjectURL(file);
-
-}
-
-</script>
-
-</body>
-</html>
