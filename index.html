@@ -75,7 +75,7 @@
         <textarea id="secret-input" placeholder="Type your secret message here..."></textarea>
       </div>
 
-      <button id="encode-btn" class="btn" onclick="encodeMessage()" disabled>Embed Secret & Download PNG</button>
+      <button id="encode-btn" class="btn" onclick="encodeMessage()" disabled>Embed & download </button>
     </div>
 
     <!-- DECODE PANEL -->
@@ -142,7 +142,7 @@
 
   function encodeMessage() {
     const text = document.getElementById('secret-input').value;
-    if (!text) return alert("Please type a secret message to embed.");
+    if (!text) return alert("Type a secret message to embed.");
 
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
