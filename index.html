@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Secret Code — Image Steganography</title>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --panel: #161e2e;
+      --accent: #00f2fe;
+      --accent-glow: rgba(0, 242, 254, 0.25);
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --border: #243044;
+      --radius: 12px;
+      --warning: #f59e0b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px; }
+    
+    .container { width: 100%; max-width: 640px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 20px 40px rgba(0,0,0,0.5); overflow: hidden; }
+    .header { padding: 20px; text-align: center; border-bottom: 1px solid var(--border); }
+    .header h1 { font-size: 1.6rem; letter-spacing: 1px; color: var(--text); }
+    .header h1 span { color: var(--accent); }
+    .header p { color: var(--text-muted); font-size: 0.85rem; margin-top: 4px; }
+
+    .tabs { display: flex; border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.2); }
+    .tab-btn { flex: 1; padding: 14px; background: none; border: none; color: var(--text-muted); font-weight: 600; cursor: pointer; transition: 0.3s; font-size: 0.95rem; }
+    .tab-btn.active { color: var(--accent); border-bottom: 2px solid var(--accent); background: var(--panel); }
+
+    .panel-content { padding: 20px; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .dropzone { border: 2px dashed var(--border); border-radius: var(--radius); padding: 24px; text-align: center; cursor: pointer; transition: 0.3s; background: rgba(255,255,255,0.01); }
+    .dropzone:hover { border-color: var(--accent); background: var(--accent-glow); }
+    .dropzone input { display: none; }
+    .dropzone p { color: var(--text-muted); font-size: 0.85rem; margin-top: 6px; }
+
+    .preview-img { max-width: 100%; max-height: 200px; border-radius: 8px; margin-top: 15px; display: none; border: 1px solid var(--border); object-fit: contain; }
+
+    .input-group { margin-top: 18px; }
+    label { display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    textarea { width: 100%; height: 90px; background: #0f172a; border: 1px solid var(--border); border-radius: 8px; padding: 12px; color: #fff; resize: none; outline: none; font-size: 0.95rem; }
+    textarea:focus { border-color: var(--accent); }
+
+    .btn { width: 100%; padding: 14px; margin-top: 18px; background: var(--accent); color: #000; font-weight: 700; border: none; border-radius: 8px; cursor: pointer; transition: 0.3s; text-transform: uppercase; letter-spacing: 0.5px; font-size: 0.9rem; }
+    .btn:hover { box-shadow: 0 0 20px var(--accent-glow); opacity: 0.95; }
+    .btn:disabled { background: var(--border); color: var(--text-muted); cursor: not-allowed; box-shadow: none; }
+
+    .warning-box { margin-top: 16px; padding: 12px; background: rgba(245, 158, 11, 0.1); border: 1px solid var(--warning); border-radius: 8px; color: var(--warning); font-size: 0.8rem; line-height: 1.4; }
+
+    .result-box { margin-top: 10px; padding: 14px; background: #0f172a; border-radius: 8px; border: 1px solid var(--border); word-break: break-all; font-size: 0.95rem; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h1>SECRET <span>CODE</span></h1>
+    <p>Zero-knowledge image steganography for Mobile & Desktop</p>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('encode')">Hide Message</button>
+    <button class="tab-btn" onclick="switchTab('decode')">Reveal Message</button>
+  </div>
+
+  <div class="panel-content">
+    <!-- ENCODE PANEL -->
+    <div id="encode-panel" class="tab-panel active">
+      <div class="dropzone" onclick="document.getElementById('encode-file').click()">
+        <strong>Tap / Click to Upload Photo</strong>
+        <p>Supports PNG, JPG, WEBP</p>
+        <input type="file" id="encode-file" accept="image/*" onchange="handleImageUpload(event, 'encode')">
+        <img id="encode-preview" class="preview-img">
+      </div>
+
+      <div class="input-group">
+        <label for="secret-input">Secret Message</label>
+        <textarea id="secret-input" placeholder="Type your secret message here..."></textarea>
+      </div>
+
+      <button id="encode-btn" class="btn" onclick="encodeMessage()" disabled>Embed Secret & Download PNG</button>
+
+      <div class="warning-box">
+        ⚠️ <strong>Sharing Notice:</strong> Messaging apps (WhatsApp, iMessage, Messenger) compress normal photos and destroy hidden secrets. Send the downloaded PNG as a <strong>"Document" or File</strong> when sharing.
+      </div>
+    </div>
+
+    <!-- DECODE PANEL -->
+    <div id="decode-panel" class="tab-panel">
+      <div class="dropzone" onclick="document.getElementById('decode-file').click()">
+        <strong>Upload Encoded Image</strong>
+        <p>Must be the PNG file downloaded from this tool</p>
+        <input type="file" id="decode-file" accept="image/png,image/*" onchange="handleImageUpload(event, 'decode')">
+        <img id="decode-preview" class="preview-img">
+      </div>
+
+      <button id="decode-btn" class="btn" onclick="decodeMessage()" disabled>Extract Secret Message</button>
+
+      <div id="output-container" style="display:none;" class="input-group">
+        <label>Decoded Message</label>
+        <div id="result-text" class="result-box"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<canvas id="canvas" style="display:none;"></canvas>
+
+<script>
+  let encodeImg = null;
+  let decodeImg = null;
+
+  function switchTab(mode) {
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
+    
+    if (mode === 'encode') {
+      document.querySelectorAll('.tab-btn')[0].classList.add('active');
+      document.getElementById('encode-panel').classList.add('active');
+    } else {
+      document.querySelectorAll('.tab-btn')[1].classList.add('active');
+      document.getElementById('decode-panel').classList.add('active');
+    }
+  }
+
+  function handleImageUpload(e, mode) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      const img = new Image();
+      img.onload = function() {
+        if (mode === 'encode') {
+          encodeImg = img;
+          document.getElementById('encode-preview').src = img.src;
+          document.getElementById('encode-preview').style.display = 'block';
+          document.getElementById('encode-btn').disabled = false;
+        } else {
+          decodeImg = img;
+          document.getElementById('decode-preview').src = img.src;
+          document.getElementById('decode-preview').style.display = 'block';
+          document.getElementById('decode-btn').disabled = false;
+        }
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function encodeMessage() {
+    const text = document.getElementById('secret-input').value;
+    if (!text) return alert("Please type a secret message to embed.");
+
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = encodeImg.width;
+    canvas.height = encodeImg.height;
+    ctx.drawImage(encodeImg, 0, 0);
+
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imgData.data;
+
+    const encoder = new TextEncoder();
+    const textBytes = encoder.encode(text);
+    const len = textBytes.length;
+
+    // Verify storage capacity (3 bits per RGBA pixel, excluding Alpha)
+    if ((len + 4) * 8 > (data.length / 4) * 3) {
+      return alert("Message is too long for this image resolution.");
+    }
+
+    let binaryPayload = [];
+    // 32-bit length header
+    for (let i = 31; i >= 0; i--) binaryPayload.push((len >> i) & 1);
+    // Message byte bits
+    for (let byte of textBytes) {
+      for (let i = 7; i >= 0; i--) binaryPayload.push((byte >> i) & 1);
+    }
+
+    // Embed bits into RGB LSBs (skipping Alpha channel)
+    let bitIdx = 0;
+    for (let i = 0; i < data.length && bitIdx < binaryPayload.length; i++) {
+      if ((i + 1) % 4 === 0) continue;
+      data[i] = (data[i] & 0xFE) | binaryPayload[bitIdx];
+      bitIdx++;
+    }
+
+    ctx.putImageData(imgData, 0, 0);
+
+    // Cross-platform automatic download trigger (iOS Safari + Android Chrome compatible)
+    canvas.toBlob(function(blob) {
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      
+      link.href = url;
+      link.download = 'secret-code-image.png';
+      document.body.appendChild(link);
+      link.click();
+      
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, 100);
+    }, 'image/png');
+  }
+
+  function decodeMessage() {
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = decodeImg.width;
+    canvas.height = decodeImg.height;
+    ctx.drawImage(decodeImg, 0, 0);
+
+    const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+
+    // Extract 32-bit length header
+    let len = 0;
+    let bitCount = 0;
+    let i = 0;
+    
+    while (bitCount < 32 && i < data.length) {
+      if ((i + 1) % 4 !== 0) {
+        len = (len << 1) | (data[i] & 1);
+        bitCount++;
+      }
+      i++;
+    }
+
+    if (len <= 0 || len * 8 > data.length) {
+      return alert("No valid secret message found in this image.");
+    }
+
+    // Extract message bytes
+    const messageBytes = new Uint8Array(len);
+    let currentByte = 0;
+    let bitsInByte = 0;
+    let byteIdx = 0;
+
+    while (byteIdx < len && i < data.length) {
+      if ((i + 1) % 4 !== 0) {
+        currentByte = (currentByte << 1) | (data[i] & 1);
+        bitsInByte++;
+        if (bitsInByte === 8) {
+          messageBytes[byteIdx++] = currentByte;
+          currentByte = 0;
+          bitsInByte = 0;
+        }
+      }
+      i++;
+    }
+
+    const decoder = new TextDecoder();
+    const resultText = decoder.decode(messageBytes);
+    
+    document.getElementById('result-text').innerText = resultText;
+    document.getElementById('output-container').style.display = 'block';
+  }
+</script>
+</body>
+</html>
